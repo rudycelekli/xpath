@@ -69,6 +69,33 @@ func Test_ancestor_predicate(t *testing.T) {
 	test_xpath_elements(t, doc, `//span/ancestor::section[2]`, 4, 9)
 }
 
+func Test_ancestor_last(t *testing.T) {
+	doc := createElement(0, "",
+		createElement(1, "html",
+			createElement(2, "body",
+				createElement(3, "section",
+					createElement(4, "div",
+						createElement(5, "section",
+							createElement(6, "span"),
+						),
+					),
+				),
+			),
+		),
+	)
+
+	// last() is the number of nodes the step selects on the axis of the
+	// context node (XPath 1.0 section 2.4). On a reverse axis the last
+	// node is the one farthest from the context node.
+	test_xpath_elements(t, doc, `//span/ancestor::*[last()]`, 1)
+	test_xpath_elements(t, doc, `//span/ancestor::*[last()-1]`, 2)
+	test_xpath_elements(t, doc, `//span/ancestor::section[last()]`, 3)
+	test_xpath_elements(t, doc, `//span/ancestor::section[position()<last()]`, 5)
+	test_xpath_elements(t, doc, `//span/ancestor-or-self::*[last()]`, 1)
+	test_xpath_elements(t, doc, `//span/ancestor-or-self::span[last()]`, 6)
+	test_xpath_count(t, doc, `//span/ancestor::*[last()=5]`, 5)
+}
+
 func Test_ancestor_predicate_chain(t *testing.T) {
 	doc := createElement(0, "",
 		createElement(1, "html",
