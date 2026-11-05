@@ -184,6 +184,30 @@ func Test_attribute_position(t *testing.T) {
 	test_xpath_values(t, doc, `/root/item/@b[1]`, "2", "5")
 }
 
+func Test_attribute_last(t *testing.T) {
+	item1 := createElement(2, "item")
+	item1.addAttribute("a", "1")
+	item1.addAttribute("b", "2")
+	item1.addAttribute("c", "3")
+	item2 := createElement(3, "item")
+	item2.addAttribute("a", "4")
+	item2.addAttribute("b", "5")
+	item3 := createElement(4, "item")
+	item3.addAttribute("c", "6")
+	doc := createElement(0, "", createElement(1, "root", item1, item2, item3))
+
+	// last() is the number of attributes the step selects for the element
+	// (XPath 1.0 section 2.4), not a count of the element's siblings.
+	test_xpath_values(t, doc, `/root/item[1]/@*[last()]`, "3")
+	test_xpath_values(t, doc, `/root/item[1]/@*[last()-1]`, "2")
+	test_xpath_values(t, doc, `/root/item[1]/@*[position()=last()]`, "3")
+	test_xpath_values(t, doc, `/root/item[1]/@*[position()<last()]`, "1", "2")
+	test_xpath_values(t, doc, `/root/item[1]/@*[last()=3]`, "1", "2", "3")
+	test_xpath_values(t, doc, `/root/item/@*[last()]`, "3", "5", "6")
+	test_xpath_values(t, doc, `/root/item/@a[last()]`, "1", "4")
+	test_xpath_eval(t, doc, `count(/root/item[2]/@*[last()=2])`, float64(2))
+}
+
 func Test_attribute_of_attribute(t *testing.T) {
 	item := createElement(2, "item")
 	item.addAttribute("a", "1")

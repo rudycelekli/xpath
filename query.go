@@ -236,6 +236,8 @@ type attributeQuery struct {
 	name     string
 	posit    int
 	iterator func() NodeNavigator
+	context  NodeNavigator
+	size     int
 
 	Input     query
 	Predicate func(NodeNavigator) bool
@@ -254,6 +256,8 @@ func (a *attributeQuery) Select(t iterator) NodeNavigator {
 				continue
 			}
 			node = node.Copy()
+			a.context = node.Copy()
+			a.size = -1
 			a.iterator = func() NodeNavigator {
 				for {
 					onAttr := node.MoveToNextAttribute()
@@ -300,6 +304,24 @@ func (a *attributeQuery) Properties() queryProp {
 // position returns a position of current NodeNavigator.
 func (a *attributeQuery) position() int {
 	return a.posit
+}
+
+// contextSize returns the number of attributes of the current context node
+// that the query selects.
+func (a *attributeQuery) contextSize() int {
+	if a.context == nil {
+		return 0
+	}
+	if a.size < 0 {
+		a.size = 0
+		node := a.context.Copy()
+		for node.MoveToNextAttribute() {
+			if a.Predicate(node) {
+				a.size++
+			}
+		}
+	}
+	return a.size
 }
 
 // childQuery is an XPath child node query.(child::*)
@@ -831,15 +853,18 @@ type filterQuery struct {
 // When the predicate filters the result of an earlier predicate or of a
 // parenthesized expression, valid is set and pos is the position of the
 // current node within that node-set, which position() must report.
+// input is the query the predicate filters, which last() asks for the
+// context size.
 type positionIterator struct {
 	iterator
 	pos   int
 	valid bool
+	input query
 }
 
 func (f *filterQuery) do(t iterator) bool {
 	if f.Positional {
-		t = positionIterator{iterator: t, pos: getNodePosition(f.Input)}
+		t = positionIterator{iterator: t, pos: getNodePosition(f.Input), input: f.Input}
 	}
 	val := reflect.ValueOf(f.Predicate.Evaluate(t))
 	switch val.Kind() {
@@ -1611,6 +1636,19 @@ func getNodePosition(q query) int {
 		return count.position()
 	}
 	return 1
+}
+
+// getContextSize returns the number of nodes the query q selects for its
+// current context node, which is the context size last() returns, and
+// whether q can count them.
+func getContextSize(q query) (int, bool) {
+	type contextSize interface {
+		contextSize() int
+	}
+	if s, ok := q.(contextSize); ok {
+		return s.contextSize(), true
+	}
+	return 0, false
 }
 
 func getNodeDepth(q query) int {
