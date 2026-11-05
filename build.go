@@ -199,11 +199,36 @@ func positionalCondition(n node) bool {
 		switch v.Op {
 		case "+", "-", "*", "div", "mod":
 			return true
+		case "=", "!=", "<", "<=", ">", ">=", "and", "or":
+			// A comparison or a boolean operator gives a boolean, which is
+			// not a position, so a number literal such as the 1 in @id = 1
+			// does not make it positional. It still is when it reads the
+			// context position or size, as in position() = 1.
+			return usesPosition(v.Left) || usesPosition(v.Right)
 		}
 		return positionalCondition(v.Left) || positionalCondition(v.Right)
 	default:
 		return false
 	}
+}
+
+// usesPosition reports whether an expression calls position() or last()
+// for the context node of the predicate it is in.
+func usesPosition(n node) bool {
+	switch v := n.(type) {
+	case *functionNode:
+		if v.FuncName == "position" || v.FuncName == "last" {
+			return true
+		}
+		for _, arg := range v.Args {
+			if usesPosition(arg) {
+				return true
+			}
+		}
+	case *operatorNode:
+		return usesPosition(v.Left) || usesPosition(v.Right)
+	}
+	return false
 }
 
 // processFilterNode builds query for the XPath filter predicate.

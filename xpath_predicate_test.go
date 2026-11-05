@@ -33,6 +33,16 @@ func TestPositionalCondition(t *testing.T) {
 		{"= non-positional", newOperatorNode("=", newOperandNode("a"), newOperandNode("b")), false},
 		{"!= non-positional", newOperatorNode("!=", newOperandNode("a"), newOperandNode("b")), false},
 		{"position()=1", newOperatorNode("=", newFunctionNode("position", "", nil), newOperandNode(float64(1))), true},
+		{"@id=1", newOperatorNode("=", newAxisNode("attribute", AttributeNode, "id", "", "", nil), newOperandNode(float64(1))), false},
+		{"@id>1", newOperatorNode(">", newAxisNode("attribute", AttributeNode, "id", "", "", nil), newOperandNode(float64(1))), false},
+		{"@a=1 or @b=2", newOperatorNode("or",
+			newOperatorNode("=", newAxisNode("attribute", AttributeNode, "a", "", "", nil), newOperandNode(float64(1))),
+			newOperatorNode("=", newAxisNode("attribute", AttributeNode, "b", "", "", nil), newOperandNode(float64(2)))), false},
+		{"count()=2", newOperatorNode("=", newFunctionNode("count", "", nil), newOperandNode(float64(2))), false},
+		{"@id=1 and position()>1", newOperatorNode("and",
+			newOperatorNode("=", newAxisNode("attribute", AttributeNode, "id", "", "", nil), newOperandNode(float64(1))),
+			newOperatorNode(">", newFunctionNode("position", "", nil), newOperandNode(float64(1)))), true},
+		{"last()=3", newOperatorNode("=", newFunctionNode("last", "", nil), newOperandNode(float64(3))), true},
 		{"last()-1", newOperatorNode("-", newFunctionNode("last", "", nil), newOperandNode(float64(1))), true},
 	}
 	for _, tt := range tests {
@@ -108,6 +118,34 @@ func TestOperators(t *testing.T) {
 	test_xpath_elements(t, employee_example, `/empinfo/employee[@id != "2" ]`, 3, 13)
 	test_xpath_elements(t, employee_example, `/empinfo/employee[@id and @id = "2"]`, 8)
 	test_xpath_elements(t, employee_example, `/empinfo/employee[@id = "1" or @id = "2"]`, 3, 8)
+}
+
+func TestComparisonPredicateDocumentOrder(t *testing.T) {
+	// <root>
+	//   <a x="1">
+	//     <a x="1"/>
+	//   </a>
+	//   <a x="1"/>
+	// </root>
+	doc := createElement(0, "",
+		createElement(1, "root",
+			createElementAttr(2, "a", map[string]string{"x": "1"},
+				createElementAttr(3, "a", map[string]string{"x": "1"}),
+			),
+			createElementAttr(5, "a", map[string]string{"x": "1"}),
+		),
+	)
+	// A comparison with a number is not a positional predicate, so the
+	// nested a element is returned in document order, before line 5.
+	test_xpath_elements(t, doc, `//a[@x]`, 2, 3, 5)
+	test_xpath_elements(t, doc, `//a[@x = 1]`, 2, 3, 5)
+	test_xpath_elements(t, doc, `//a[@x != 2]`, 2, 3, 5)
+	test_xpath_elements(t, doc, `//a[@x > 0]`, 2, 3, 5)
+	test_xpath_elements(t, doc, `//a[not(@x = 2)]`, 2, 3, 5)
+	test_xpath_elements(t, doc, `//a[@x = 1 or @x = 2]`, 2, 3, 5)
+	// A position is still counted for each parent.
+	test_xpath_elements(t, doc, `//a[position() = 1]`, 2, 3)
+	test_xpath_elements(t, doc, `//a[@x = 1 and position() = 2]`, 5)
 }
 
 func TestNestedPredicates(t *testing.T) {
