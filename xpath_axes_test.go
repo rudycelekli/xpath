@@ -231,6 +231,20 @@ func Test_preceding_sibling(t *testing.T) {
 	test_xpath_elements(t, employee_example, `//employee[@id=3]/preceding-sibling::*`, 8, 3)
 }
 
+func Test_preceding_last(t *testing.T) {
+	// last() is the number of nodes the step selects on the axis of the
+	// context node (XPath 1.0 section 2.4). On a reverse axis the last
+	// node is the one farthest from the context node.
+	test_xpath_elements(t, employee_example, `//employee[@id=3]/preceding-sibling::*[last()]`, 3)
+	test_xpath_elements(t, employee_example, `//employee[@id=3]/preceding-sibling::*[last()-1]`, 8)
+	test_xpath_elements(t, employee_example, `//employee[@id=3]/preceding-sibling::*[position()<last()]`, 8)
+	test_xpath_elements(t, employee_example, `//employee[@id=2]/preceding-sibling::*[last()]`, 3)
+	test_xpath_elements(t, employee_example, `//employee/email/preceding-sibling::*[last()]`, 4, 9, 14)
+	test_xpath_count(t, employee_example, `//employee[@id=3]/preceding-sibling::*[last()=2]`, 2)
+	test_xpath_count(t, employee_example, `//employee[@id=3]/preceding::*[last()=8]`, 8)
+	test_xpath_count(t, employee_example, `//employee[@id=3]/preceding::employee[last()=2]`, 2)
+}
+
 func Test_namespace(t *testing.T) {
 	// TODO
 }
