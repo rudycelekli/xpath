@@ -102,6 +102,16 @@ func Test_parent(t *testing.T) {
 	test_xpath_elements(t, employee_example, `//name/parent::employee`, 3, 8, 13)
 }
 
+func Test_self_parent_last(t *testing.T) {
+	// The self and parent axes select at most one node, so the context size
+	// last() returns is 1 (XPath 1.0 section 2.4).
+	test_xpath_elements(t, employee_example, `//name/self::*[last()]`, 4, 9, 14)
+	test_xpath_elements(t, employee_example, `//name/self::name[last()=1]`, 4, 9, 14)
+	test_xpath_elements(t, employee_example, `//name/parent::*[last()]`, 3, 8, 13)
+	test_xpath_elements(t, employee_example, `//name/parent::employee[position()=last()]`, 3, 8, 13)
+	test_xpath_count(t, employee_example, `//name/parent::*[last()>1]`, 0)
+}
+
 func Test_parent_no_duplicates(t *testing.T) {
 	// Each employee has three element children, but a node-set holds each
 	// parent once. selectNodes removes duplicates itself, so check count()
