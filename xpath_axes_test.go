@@ -151,6 +151,35 @@ func Test_axes_no_duplicates(t *testing.T) {
 	}
 }
 
+func Test_descendant_last(t *testing.T) {
+	// <root>
+	//   <a>
+	//     <b><c/></b>
+	//     <c/>
+	//   </a>
+	//   <a><c/></a>
+	// </root>
+	doc := createElement(0, "",
+		createElement(1, "root",
+			createElement(2, "a",
+				createElement(3, "b", createElement(4, "c")),
+				createElement(6, "c"),
+			),
+			createElement(8, "a", createElement(9, "c")),
+		),
+	)
+	// last() is the number of nodes the step selects on the axis of the
+	// context node (XPath 1.0 section 2.4).
+	test_xpath_elements(t, doc, `/root/descendant::*[last()]`, 9)
+	test_xpath_elements(t, doc, `/root/descendant::*[last()-1]`, 8)
+	test_xpath_elements(t, doc, `/root/descendant::c[last()]`, 9)
+	test_xpath_elements(t, doc, `/root/a/descendant::*[last()]`, 6, 9)
+	test_xpath_elements(t, doc, `/root/a/descendant::c[last()]`, 6, 9)
+	test_xpath_elements(t, doc, `/root/a[1]/descendant::*[position()<last()]`, 3, 4)
+	test_xpath_elements(t, doc, `/root/a/descendant-or-self::*[last()]`, 6, 9)
+	test_xpath_elements(t, doc, `/root/a[2]/descendant-or-self::*[last()=2]`, 8, 9)
+}
+
 func Test_attribute(t *testing.T) {
 	test_xpath_values(t, employee_example, `//attribute::id`, "1", "2", "3")
 	test_xpath_count(t, employee_example, `//attribute::*`, 9)
