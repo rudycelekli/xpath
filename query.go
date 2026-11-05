@@ -566,12 +566,24 @@ func (f *followingQuery) Select(t iterator) NodeNavigator {
 				}
 			} else {
 				var q *descendantQuery // descendant query
+				// The children of an element follow its attributes in
+				// document order, so the axis of an attribute starts with
+				// the children of its element.
+				fromAttr := node.NodeType() == AttributeNode
 				f.iterator = func() NodeNavigator {
 					for {
 						if q == nil {
-							for !node.MoveToNext() {
-								if !node.MoveToParent() {
-									return nil
+							if fromAttr {
+								fromAttr = false
+								node.MoveToParent()
+								if !node.MoveToChild() {
+									continue
+								}
+							} else {
+								for !node.MoveToNext() {
+									if !node.MoveToParent() {
+										return nil
+									}
 								}
 							}
 							q = &descendantQuery{

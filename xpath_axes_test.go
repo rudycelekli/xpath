@@ -206,6 +206,31 @@ func Test_following(t *testing.T) {
 	test_xpath_elements(t, employee_example, `//employee[@id=1]/following::*`, 8, 9, 10, 11, 13, 14, 15, 16)
 }
 
+func Test_following_from_attribute(t *testing.T) {
+	// <root>
+	//   <a x="1">
+	//     <b/>
+	//     <c><d/></c>
+	//   </a>
+	//   <e/>
+	// </root>
+	a := createElement(2, "a",
+		createElement(3, "b"),
+		createElement(4, "c", createElement(5, "d")),
+	)
+	a.addAttribute("x", "1")
+	doc := createElement(0, "", createElement(1, "root", a, createElement(7, "e")))
+
+	// The attributes of an element come before its children in document
+	// order (XPath 1.0 section 5), so the following axis of an attribute
+	// starts with the children of its element.
+	test_xpath_elements(t, doc, `//a/@x/following::*`, 3, 4, 5, 7)
+	test_xpath_elements(t, doc, `//a/@x/following::*[1]`, 3)
+	test_xpath_elements(t, doc, `//a/@x/following::d`, 5)
+	test_xpath_count(t, doc, `//a/@x/following-sibling::*`, 0)
+	test_xpath_eval(t, doc, `count(//a/@x/following::node())`, float64(4))
+}
+
 func Test_following_position(t *testing.T) {
 	// Positions count across all the following nodes of the context node,
 	// not from 1 again in each following subtree.
